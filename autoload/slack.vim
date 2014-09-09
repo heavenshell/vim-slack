@@ -45,17 +45,16 @@ function! s:shellwords(str)
 endfunction
 
 function! s:get_visual_text()
-    " Get visual mode selection for execute `autopep8 --range`.
-    let text = ''
-    let mode = visualmode(1)
-    if mode == 'v' || mode == 'V' || mode == ''
-      let start_lnum = line("'<")
-      let end_lnum = line("'>")
-      let lines = getline(start_lnum, end_lnum)
-      let text = join(lines, "\n")
-    endif
+  let text = ''
+  let mode = visualmode(1)
+  if mode == 'v' || mode == 'V' || mode == ''
+    let start_lnum = line("'<")
+    let end_lnum = line("'>")
+    let lines = getline(start_lnum, end_lnum)
+    let text = join(lines, "\n")
+  endif
 
-    return text
+  return text
 endfunction
 
 function! s:build_payload(args, text)
