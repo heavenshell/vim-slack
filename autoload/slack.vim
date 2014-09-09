@@ -19,6 +19,10 @@ if !exists('g:slack_debug')
   let g:slack_debug = 0
 endif
 
+if !exists('g:slack_link_names')
+  let g:slack_link_names = 0
+endif
+
 let s:slack_req_params = [
   \ 'channel', 'username', 'text', 'icon_emoji'
   \]
@@ -95,6 +99,10 @@ function! s:build_payload(args, text)
     endif
     if !has_key(payloads, 'username')
       let payloads['username'] = 'Slack.vim'
+    endif
+
+    if g:slack_link_names == 1
+      let payloads['link_names'] = 1
     endif
   endif
 
