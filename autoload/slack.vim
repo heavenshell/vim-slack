@@ -61,7 +61,8 @@ function! s:build_payload(args, text)
   let payloads = {}
   let words = s:shellwords(a:args)
   if words == []
-    " No command line args
+    " No command line args.
+    " POST current buffer.
   else
     let i = 0
     for word in words
