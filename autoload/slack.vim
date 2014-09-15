@@ -60,9 +60,10 @@ endfunction
 function! s:build_payload(args, text)
   let payloads = {}
   let words = s:shellwords(a:args)
-  if words == []
+  if words == [] || !has_key(words, 'text')
     " No command line args.
     " POST current buffer.
+    let content = join(getline(1, line('$')), "\n")
   else
     let i = 0
     for word in words
