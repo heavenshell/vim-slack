@@ -23,6 +23,10 @@ if !exists('g:slack_link_names')
   let g:slack_link_names = 0
 endif
 
+if !exists('g:slack_default_token')
+  let g:slack_default_token = ''
+endif
+
 let s:slack_req_params = [
   \ 'channel', 'username', 'text', 'icon_emoji'
   \]
@@ -117,9 +121,19 @@ function! slack#post(...)
   redraw | echon 'Updating Slack... '
   let text = s:get_visual_text()
   let payloads = s:build_payload(a:000[0], text)
-  let key = payloads['channel']
 
-  let uri = g:slack_channels[key]
+  let key = payloads['channel']
+  if has_key(g:slack_channels, key)
+    let uri = g:slack_channels[key]
+  else
+    if g:slack_default_token == ''
+      echohl ErrorMsg | echomsg 'Token not found.' | echohl None
+      return
+    else
+      let uri = g:slack_default_token
+    endif
+  endif
+
   let data = webapi#json#encode(payloads)
   if g:slack_debug == 1
     echomsg data
