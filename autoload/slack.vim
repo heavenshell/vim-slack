@@ -98,6 +98,9 @@ function! s:build_payload(args, text)
     if has_key(payloads, 'icon_emoji') && payloads['icon_emoji'] !~ '^:'
       let payloads['icon_emoji'] = ':' . payloads['icon_emoji']
     endif
+    if has_key(payloads, 'icon_emoji') && payloads['icon_emoji'] !~ ':$'
+      let payloads['icon_emoji'] = payloads['icon_emoji'] . ':'
+    endif
     if !has_key(payloads, 'username')
       let payloads['username'] = 'Slack.vim'
     endif
