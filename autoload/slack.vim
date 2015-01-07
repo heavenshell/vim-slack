@@ -23,8 +23,12 @@ if !exists('g:slack_link_names')
   let g:slack_link_names = 0
 endif
 
-if !exists('g:slack_default_token')
-  let g:slack_default_token = ''
+if !exists('g:slack_incoming_token')
+  let g:slack_incoming_token = ''
+endif
+
+if !exists('g:slack_fileupload_token')
+  let g:slack_fileupload_token = ''
 endif
 
 let s:slack_req_params = [
@@ -64,54 +68,56 @@ endfunction
 function! s:build_payload(args, text)
   let payloads = {}
   let words = s:shellwords(a:args)
-  if words == [] || !has_key(words, 'text')
+  let i = 0
+  for word in words
+    if word =~ '^-text='
+      if a:text == ''
+        let values = split(word, '=')
+        if len(values) == 1
+          " Multiple words.
+          let text = words[i + 1]
+        else
+          " Single word.
+          let text = values[1]
+        endif
+        let payloads['text'] = text
+      endif
+    elseif word =~ '^-[a-z]+\='
+      let values = split(word, '=')
+      if len(values) > 0
+        let value = values[1]
+      endif
+      let key = substitute(values[0], '^-', '', '')
+      let payloads[key] = value
+    endif
+    let i = i + 1
+  endfor
+  if a:text != ''
+    let payloads['text'] = a:text
+  endif
+
+  if !has_key(payloads, 'text')
     " No command line args.
     " POST current buffer.
     let content = join(getline(1, line('$')), "\n")
-  else
-    let i = 0
-    for word in words
-      if word =~ '^-text='
-        if a:text == ''
-          let values = split(word, '=')
-          if len(values) == 1
-            " Multiple words.
-            let text = words[i + 1]
-          else
-            " Single word.
-            let text = values[1]
-          endif
-          let payloads['text'] = text
-        endif
-      elseif word =~ '^-[a-z]+\='
-        let values = split(word, '=')
-        if len(values) > 0
-          let value = values[1]
-        endif
-        let key = substitute(values[0], '^-', '', '')
-        let payloads[key] = value
-      endif
-      let i = i + 1
-    endfor
-    if a:text != ''
-      let payloads['text'] = a:text
-    endif
-    if payloads['channel'] !~ '^#'
-      let payloads['channel'] = '#' . payloads['channel']
-    endif
-    if has_key(payloads, 'icon_emoji') && payloads['icon_emoji'] !~ '^:'
-      let payloads['icon_emoji'] = ':' . payloads['icon_emoji']
-    endif
-    if has_key(payloads, 'icon_emoji') && payloads['icon_emoji'] !~ ':$'
-      let payloads['icon_emoji'] = payloads['icon_emoji'] . ':'
-    endif
-    if !has_key(payloads, 'username')
-      let payloads['username'] = 'Slack.vim'
-    endif
+    let payloads['content'] = content
+  endif
 
-    if g:slack_link_names == 1
-      let payloads['link_names'] = 1
-    endif
+  if payloads['channel'] !~ '^#'
+    let payloads['channel'] = '#' . payloads['channel']
+  endif
+  if has_key(payloads, 'icon_emoji') && payloads['icon_emoji'] !~ '^:'
+    let payloads['icon_emoji'] = ':' . payloads['icon_emoji']
+  endif
+  if has_key(payloads, 'icon_emoji') && payloads['icon_emoji'] !~ ':$'
+    let payloads['icon_emoji'] = payloads['icon_emoji'] . ':'
+  endif
+  if !has_key(payloads, 'username')
+    let payloads['username'] = 'Slack.vim'
+  endif
+
+  if g:slack_link_names == 1
+    let payloads['link_names'] = 1
   endif
 
   return payloads
@@ -122,15 +128,26 @@ function! slack#post(...)
   let text = s:get_visual_text()
   let payloads = s:build_payload(a:000[0], text)
 
+  if !has_key(payloads, 'channel')
+    echohl ErrorMsg | echomsg 'Channel not found.' | echohl None
+    return
+  endif
+
   let key = payloads['channel']
   if has_key(g:slack_channels, key)
     let uri = g:slack_channels[key]
   else
-    if g:slack_default_token == ''
+    if g:slack_incoming_token == ''
       echohl ErrorMsg | echomsg 'Token not found.' | echohl None
       return
     else
-      let uri = g:slack_default_token
+      let uri = g:slack_incoming_token
+    endif
+  endif
+  if has_key(payloads, 'content')
+    if g:slack_fileupload_token == ''
+      echohl ErrorMsg | echomsg 'File upload token is not found. Generate token from https://api.slack.com/#auth' | echohl None
+      return
     endif
   endif
 
