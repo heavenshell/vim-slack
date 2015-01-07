@@ -3,6 +3,8 @@ Slack for Vim
 
 This is a Vim plugin for post message to [Slack](https://slack.com/)
 
+Currently this plugin is work in progress.
+
 Usage
 -----
 
