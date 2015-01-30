@@ -163,5 +163,52 @@ function! slack#post(...)
   endif
 endfunction
 
+function! slack#file(...)
+  """ WIP...
+  if g:slack_fileupload_token == ''
+    echohl ErrorMsg | echomsg 'File upload token is not found. Generate token from https://api.slack.com/#auth' | echohl None
+    return
+  endif
+  redraw | echon 'Updating Slack... '
+  let text = s:get_visual_text()
+  let payloads = s:build_payload(a:000[0], text)
+  let filename = bufname('%')
+  let ftype = &filetype
+  let channel = payloads['channel']
+  let content = payloads['content']
+  let uri = 'https://slack.com/api/groups.list'
+  let data = {
+    \ 'token': g:slack_fileupload_token,
+    \ }
+
+  " File upload api need channel is.
+  " So, first get channel id.
+  " TODO need to get channels.
+  let response = webapi#http#post(uri, data)
+  let contents = webapi#json#decode(response.content)
+  let channel_id = ''
+  for c in contents['groups']
+    if channel == printf('#%s', c.name)
+      let channel_id = c.id
+      break
+    endif
+  endfor
+  let data = {
+    \ 'token': g:slack_fileupload_token,
+    \ 'content': content,
+    \ 'filetype': ftype,
+    \ 'filename': filename,
+    \ 'channels': channel_id
+    \ }
+
+  let uri = 'https://slack.com/api/files.upload'
+  let response = webapi#http#post(uri, data)
+  if response['status'] =~ '^2'
+    redraw | echomsg 'Done: ' . response['message']
+  else
+    echohl ErrorMsg | echomsg 'Post failed: ' . response['content'] | echohl None
+  endif
+endfunction
+
 let &cpo = s:save_cpo
 unlet s:save_cpo
