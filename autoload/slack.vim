@@ -103,9 +103,12 @@ function! s:build_payload(args, text)
     let payloads['content'] = content
   endif
 
-  if payloads['channel'] !~ '^#'
+  if !has_key(payloads, 'channel')
+  elseif payloads['channel'] !~ '^#'
     let payloads['channel'] = '#' . payloads['channel']
   endif
+
+
   if has_key(payloads, 'icon_emoji') && payloads['icon_emoji'] !~ '^:'
     let payloads['icon_emoji'] = ':' . payloads['icon_emoji']
   endif
@@ -172,6 +175,10 @@ function! slack#file(...)
   redraw | echon 'Updating Slack... '
   let text = s:get_visual_text()
   let payloads = s:build_payload(a:000[0], text)
+  if !has_key(payloads, 'channel')
+    echohl ErrorMsg | echomsg 'Channel not found.' | echohl None
+    return
+  endif
   let filename = bufname('%')
   let ftype = &filetype
   let channel = payloads['channel']
@@ -193,6 +200,10 @@ function! slack#file(...)
       break
     endif
   endfor
+  if channel_id == ''
+    echohl ErrorMsg | echomsg 'Channel not found.' | echohl None
+    return
+  endif
   let data = {
     \ 'token': g:slack_fileupload_token,
     \ 'content': content,
