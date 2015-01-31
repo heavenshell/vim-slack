@@ -44,6 +44,15 @@ Usage
   :'<,'>Slack -channel=#general -username=Vimmer
   ```
 
+- Upload current buffer as a file.
+  ```viml
+  :SlackFile -channel=#general
+  ```
+
+- Upload selected text as a file.
+  ```viml
+  :'<,'>SlackFile -channel=#general
+  ```
 Requirement
 -----------
 This plugin need [webapi-vim](https://github.com/mattn/webapi-vim).

@@ -31,9 +31,15 @@ if !exists('g:slack_fileupload_token')
   let g:slack_fileupload_token = ''
 endif
 
+if !exists('g:slack_channel_ids')
+  let g:slack_channel_ids = {}
+endif
+
 let s:slack_req_params = [
   \ 'channel', 'username', 'text', 'icon_emoji'
   \]
+
+let s:slack_channels = {}
 
 function! slack#complete(lead, cmd, pos)
   let args = map(copy(s:slack_req_params), '"-" . v:val . "="')
@@ -108,7 +114,6 @@ function! s:build_payload(args, text)
     let payloads['channel'] = '#' . payloads['channel']
   endif
 
-
   if has_key(payloads, 'icon_emoji') && payloads['icon_emoji'] !~ '^:'
     let payloads['icon_emoji'] = ':' . payloads['icon_emoji']
   endif
@@ -166,6 +171,28 @@ function! slack#post(...)
   endif
 endfunction
 
+function! slack#channel_id()
+  let uris = {
+    \ 'channels': 'https://slack.com/api/channels.list',
+    \ 'groups': 'https://slack.com/api/groups.list'
+    \ }
+  let data = {
+    \ 'token': g:slack_fileupload_token,
+    \ }
+
+  let channels = {}
+  for k in keys(uris)
+    let response = webapi#http#post(uris[k], data)
+    let contents = webapi#json#decode(response.content)
+    for c in contents[k]
+      let channels[printf('#%s', c['name'])] = c['id']
+    endfor
+  endfor
+  let s:slack_channels = channels
+
+  return channels
+endfunction
+
 function! slack#file(...)
   """ WIP...
   if g:slack_fileupload_token == ''
@@ -183,23 +210,26 @@ function! slack#file(...)
   let ftype = &filetype
   let channel = payloads['channel']
   let content = payloads['content']
-  let uri = 'https://slack.com/api/groups.list'
   let data = {
     \ 'token': g:slack_fileupload_token,
     \ }
 
-  " File upload api need channel is.
-  " So, first get channel id.
-  " TODO need to get channels.
-  let response = webapi#http#post(uri, data)
-  let contents = webapi#json#decode(response.content)
+  " Check global channel ids first.
+  " If global was not found, try to get channel ids from API.
   let channel_id = ''
-  for c in contents['groups']
-    if channel == printf('#%s', c.name)
-      let channel_id = c.id
-      break
+  if len(keys(g:slack_channel_ids)) > 0
+    if has_key(g:slack_channel_ids, channel)
+      let channel_id = g:slack_channel_ids[channel]
     endif
-  endfor
+  else
+    if len(keys(s:slack_channels)) == 0
+      call slack#channel_id()
+    endif
+    if has_key(s:slack_channels, channel)
+      let channel_id = s:slack_channels[channel]
+    endif
+  endif
+
   if channel_id == ''
     echohl ErrorMsg | echomsg 'Channel not found.' | echohl None
     return
